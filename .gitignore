@@ -1,3 +1,8 @@
 .vscode/
 communities/
 out/
+*.txt
+*.exe
+cmd/dominationScore/settings.json
+scripts/config.jl
+cmd/datasetGenerator/settings.json
