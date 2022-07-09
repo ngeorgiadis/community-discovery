@@ -6,3 +6,4 @@ out/
 cmd/dominationScore/settings.json
 scripts/config.jl
 cmd/datasetGenerator/settings.json
+/scripts/back/
