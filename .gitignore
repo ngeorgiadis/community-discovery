@@ -7,3 +7,7 @@ cmd/dominationScore/settings.json
 scripts/config.jl
 cmd/datasetGenerator/settings.json
 /scripts/back/
+back/
+exp/
+run-api.cmd
+cmd/aminer/settings.json
