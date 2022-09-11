@@ -145,6 +145,14 @@ func translate2(p []int, stats *DataStats, gridSize ...int) float64 {
 	return res
 }
 
+func sumSlice(n []int) int {
+	s := 0
+	for i := range n {
+		s += n[i]
+	}
+	return s
+}
+
 type DatasetReader interface {
 	ReadDataset(filename string) (map[int]DataRow, *DataStats, []DataPoint)
 }
@@ -344,7 +352,7 @@ func (dsc *DominationScoreCalculator) Calc(dataReader DatasetReader, inputFile s
 	total := time.Now()
 
 	t1 := time.Now()
-	rows, stats, unique := dataReader.ReadDataset(inputFile) // ReadDatasetRows(inputFile)
+	rows, stats, unique := dataReader.ReadDataset(inputFile)
 	fmt.Printf("reading done in: %v\n", time.Since(t1))
 
 	t1 = time.Now()
@@ -383,6 +391,7 @@ func (dsc *DominationScoreCalculator) Calc(dataReader DatasetReader, inputFile s
 		gridCoors = append(gridCoors, DataPoint{
 			Attrs: a,
 		})
+
 	}
 	fmt.Printf("creating grid done in: %v\n", time.Since(t1))
 
@@ -391,18 +400,29 @@ func (dsc *DominationScoreCalculator) Calc(dataReader DatasetReader, inputFile s
 	t1 = time.Now()
 	sort.Slice(gridCoors, datapointSortFn(gridCoors))
 
+	var la time.Duration
+	var lb time.Duration
+	var lc time.Duration
+
 	for i := range gridCoors {
 
 		ik := getKey(gridCoors[i].Attrs)
 		point := gridCoors[i].Attrs
 
+		sum := sumSlice(point)
+
 		baseScore := 0
 		later := []DataPoint{}
 
-		for j := range gridCoors {
+		l1 := time.Now()
 
-			jk := getKey(gridCoors[j].Attrs)
-			point_to_compare_with := gridCoors[j].Attrs
+		for _, j := range gridCoors[i:] {
+			if sumSlice(j.Attrs) > sum {
+				continue
+			}
+
+			jk := getKey(j.Attrs)
+			point_to_compare_with := j.Attrs
 
 			if a_less_b(point_to_compare_with, point) {
 
@@ -413,15 +433,17 @@ func (dsc *DominationScoreCalculator) Calc(dataReader DatasetReader, inputFile s
 			} else if a_less_or_equal_b(point_to_compare_with, point) {
 
 				later = append(later, grid[jk]...)
+
 			}
 		}
+		la += time.Since(l1)
 
 		for _, n := range grid[ik] {
 
 			nodeScore := baseScore
 
 			if approximate {
-
+				l2 := time.Now()
 				agrCellItems := 0
 				for _, l := range later {
 					agrCellItems += l.Count
@@ -431,23 +453,26 @@ func (dsc *DominationScoreCalculator) Calc(dataReader DatasetReader, inputFile s
 				approximateScore := float64(agrCellItems) * apprx
 
 				nodeScore += int(approximateScore)
+				lb += time.Since(l2)
 
 			} else {
+
+				l3 := time.Now()
 				for _, l := range later {
 					if a_dominates_b(n.Attrs, l.Attrs) {
 						nodeScore += l.Count
 					}
 				}
+				lc += time.Since(l3)
 			}
 
 			domination[getKey(n.Attrs)] = nodeScore
 		}
 
-		if i%1000 == 0 {
-			fmt.Printf("%v (%v of %v)\n", time.Since(t1), i+1, len(gridCoors))
+		if i%1000 == 0 && i > 0 {
+			fmt.Printf("%v (%v of %v)\t%v\t%v\t%v\tapprx:%v\n", time.Since(t1), i+1, len(gridCoors), la, lb, lc, approximate)
 			t1 = time.Now()
 		}
-
 	}
 	fmt.Printf("main calc done in: %v\n", time.Since(mainCalc))
 	t1 = time.Now()

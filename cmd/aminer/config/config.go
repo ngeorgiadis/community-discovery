@@ -6,12 +6,12 @@ import (
 )
 
 type AppConfig struct {
-	DatasetType       string `json:"datasetType"`
-	DatasetSize       int    `json:"datasetSize"`
-	DatasetDimensions int    `json:"datasetDimensions"`
-	BaseOutputPath    string `json:"baseOutputPath"`
-	GridSize          []int  `json:"gridSize"`
-	Approximate       bool   `json:"approximate"`
+	NodesCSVFile   string `json:"nodesCSVFile"`
+	EdgesCSVFile   string `json:"edgesCSVFile"`
+	BaseOutputPath string `json:"baseOutputPath"`
+	Dimensions     int    `json:"dimensions"`
+	GridSize       []int  `json:"gridSize"`
+	Approximate    bool   `json:"approximate"`
 }
 
 func New(configFile string) (*AppConfig, error) {

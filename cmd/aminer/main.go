@@ -6,29 +6,41 @@ import (
 	"log"
 	"math"
 	"os"
+	"path"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/ngeorgiadis/community-discovery/cmd/aminer/config"
 	"github.com/ngeorgiadis/community-discovery/internal/domination"
 )
 
 func main() {
-	ds := domination.New()
-
 	// max 572, 15757, 60, 8308
 	// gridSize := []int{25, 25, 25, 25}
 	// gridSize := []int{
 	// 	10, 10, 10, 10,
 	// }
 
-	dsFilePath := "domination.txt"
-	defaultReader := &AminerDatasetReader{Dimensions: 2}
+	a, err := config.New("settings.json")
+	if err != nil {
+		panic(err)
+	}
 
-	// path to input file i.e. nodes_all.csv
-	nodesCSVFile := ""
-	gridSize := []int{100, 100}
+	// create timestamp and prepare output folder
+	timestamp := time.Now().Format("20060102_150405")
+	outputBasePath := path.Join(a.BaseOutputPath, timestamp)
+	err = os.MkdirAll(outputBasePath, 0777)
+	if err != nil {
+		panic(err.Error())
+	}
 
-	ds.Calc(defaultReader, nodesCSVFile, dsFilePath, false, gridSize)
+	ds := domination.New()
+	dsFilePath := path.Join(outputBasePath, "domination.txt")
+
+	defaultReader := &AminerDatasetReader{Dimensions: a.Dimensions}
+
+	ds.Calc(defaultReader, a.NodesCSVFile, dsFilePath, a.Approximate, a.GridSize)
 }
 
 type AminerDatasetReader struct {

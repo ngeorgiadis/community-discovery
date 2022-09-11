@@ -45,8 +45,13 @@ func main() {
 		panic(err)
 	}
 
+	suffix := "exact"
+	if a.Approximate {
+		suffix = "approx"
+	}
+
 	datasetFilename := fmt.Sprintf("dataset_%v_%v.txt", a.DatasetType, time.Now().Format("20060102_150405"))
-	outputFile := fmt.Sprintf("domination_%v_%v.txt", a.DatasetType, time.Now().Format("20060102_150405"))
+	outputFile := fmt.Sprintf("domination_%v_%v_%v.txt", a.DatasetType, time.Now().Format("20060102_150405"), suffix)
 	outputPath := path.Join(a.BaseOutputPath, outputFile)
 
 	err = os.MkdirAll(a.BaseOutputPath, 0777)
@@ -82,13 +87,14 @@ func main() {
 		}
 	}
 	f.Close()
+	fmt.Println(".")
 
 	ds := domination.New()
 	syntheticReader := &SyntheticDatasetReader{
 		Dimensions: a.DatasetDimensions,
 	}
 
-	ds.Calc(syntheticReader, datasetFilename, path.Join(a.BaseOutputPath, outputPath), false, a.GridSize)
+	ds.Calc(syntheticReader, datasetFilename, outputPath, a.Approximate, a.GridSize)
 }
 
 type SyntheticDatasetReader struct {
@@ -117,8 +123,8 @@ func (sdr *SyntheticDatasetReader) ReadDataset(filename string) (map[int]dominat
 	}
 
 	for i := range stats.Max {
-		stats.Max[i] = math.MaxInt64
-		stats.Min[i] = math.MinInt64
+		stats.Max[i] = math.MinInt64
+		stats.Min[i] = math.MaxInt64
 	}
 
 	// stats.Max = []int{math.MinInt64, math.MinInt64, math.MinInt64, math.MinInt64}
