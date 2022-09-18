@@ -8,10 +8,11 @@ using MD5
 
 include("config.jl")
 
+DEBUG = false
 
 function load_graph_data_simple(file)
     G = MetaGraph(1712433)
-    # "N:/sources/01_datalab/2022/data/AMiner-Coauthor.txt"
+
     open(file) do f
         for ln in eachline(f)
             p = split(ln, "\t")
@@ -27,7 +28,7 @@ end
 
 function load_graph_data_multigraph(file)
     G = MetaGraph(1712433)
-    # "N:/sources/01_datalab/2022/data/AMiner-Coauthor.txt"
+
     open(file) do f
         for ln in eachline(f)
             p = split(ln, "\t")
@@ -49,18 +50,13 @@ function read_dom(file)
     dom_dict = Dict{Int64,Int64}()
     dom_array = []
 
-    # "N:/sources/01_datalab/2022/data/auth_dom_scores.txt"
+
     open(file) do f
         for ln in eachline(f)
             p = split(ln, "\t")
             if length(p) == 2
                 id = parse(Int64, p[1])
                 dom = parse(Int64, p[2])
-                # d = degree(G, id)
-
-                # if d > max_degree
-                #     max_degree = d
-                # end
 
                 if dom > max_dom
                     max_dom = dom
@@ -102,14 +98,16 @@ function get_graph_stats(attr, max_dom, max_core_number)
 end
 
 function find_communities_overlapping(g, dsa, top, hop, check_points)
-    results = Array{Dict{String,Any}}(undef, top)
 
+    results = []
 
     max_dom = dsa[1][:dom]
 
     check1 = Base.time()
     checpoint_times = []
     cpi = 1
+    egotime = 0
+    kcoretime = 0
 
     for (idx, n) in enumerate(dsa[1:top])
 
@@ -117,13 +115,20 @@ function find_communities_overlapping(g, dsa, top, hop, check_points)
             p1 = Base.time() - check1
             push!(checpoint_times, p1)
             println("")
-            println("checkpoint: $(sum(checpoint_times)), top-$(check_points[cpi]) ( $(length(results)) ), $(hop)")
+            println("checkpoint: $(sum(checpoint_times)), top-$(check_points[cpi]), egonet time: $(egotime), k-core time:$(kcoretime) ( $(length(results)) ), $(hop)")
             cpi += 1
             check1 = Base.time()
         end
 
+        t0 = Base.time()
 
+        # find egonet
         e1 = egonet(g, n[:id], hop)
+        # end 
+
+        et = Base.time() - t0
+        egotime = egotime + et
+
         e2, _ = induced_subgraph(
             e1,
             filter(
@@ -132,20 +137,31 @@ function find_communities_overlapping(g, dsa, top, hop, check_points)
                 vertices(e1),
             ),
         )
-        if nv(e2) == 0
+        if nv(e2) <= 1
             continue
         end
+
+        t0 = Base.time()
+        # find max k-core
         corenum = core_number(e2)
         k = maximum(corenum)
         max_k_core = findall(x -> x >= k, corenum)
         k1, _ = induced_subgraph(e2, max_k_core)
+        # end
+
+        kt = Base.time() - t0
+        kcoretime = kcoretime + kt
+
         k2 = map(v -> props(k1, v), vertices(k1))
 
         # get graph stats
         stats = get_graph_stats(k2, max_dom, k)
         stats["init"] = n[:id]
         stats["original_index"] = idx
-        results[idx] = stats
+        stats["egotime"] = et
+        stats["kcoretime"] = kt
+
+        push!(results, stats)
 
         if idx % 1000 == 0
             print(".")
@@ -153,26 +169,12 @@ function find_communities_overlapping(g, dsa, top, hop, check_points)
 
     end
 
-    return results
+    return results, egotime, kcoretime
 end
 
 function main()
-    # g = @time load_graph_data_simple()
-    # didx, dsa, max_dom = @time read_dom()
-    # @time find_communities(g, dsa, didx, 1000, 1)
 
-    # linux path
     graph_file = "/mnt/n/sources/01_datalab/2022/data/AMiner-Coauthor.txt"
-
-    # dom_files = [
-    #     "/mnt/n/sources/01_datalab/2022/data/auth_dom_scores_2d.txt",
-    #     "/mnt/n/sources/01_datalab/2022/data/auth_dom_scores_3d.txt",
-    #     "/mnt/n/sources/01_datalab/2022/data/auth_dom_scores.txt"
-    # ]
-
-    # windows path
-    # graph_file = "N:/sources/01_datalab/2022/data/AMiner-Coauthor.txt"
-    # dom_file = "N:/sources/01_datalab/2022/data/auth_dom_scores.txt"
 
     println("graph_file: $(graph_file)")
     println("dom_file: $(dom_file)")
@@ -190,12 +192,73 @@ function main()
     didx = nothing
     GC.gc()
 
-    # all = 581740
-    check_points = [5000, 10000, 50000, 100000, 581740]
-    results = @time find_communities_overlapping(g, dsa, all, hop, check_points)
+    check_points = [5000, 10000, 50000, 100000, 500000]
+    results, egotime, kcoretime = @time find_communities_overlapping(g, dsa, all, hop, check_points)
 
-    println("total communities: $(length(results))")
+    println("total communities: $(length(results)), egonet time: $(egotime), k-core time: $(kcoretime)")
     println("")
+
+    #
+    # SAVING RESULTS
+    #
+
+    df = DataFrame(init=Int64[],
+        original_index=Int64[],
+        number_of_nodes=Float64[],
+        ratio_max_k_core=Float64[],
+        max_k_core=Float64[],
+        max_stddev=Float64[],
+        e2=Float64[],
+        e4=Float64[],
+        egotime=Float64[],
+        kcoretime=Float64[]
+    )
+
+    if DEBUG
+        df = DataFrame(init=Int64[],
+            original_index=Int64[],
+            number_of_nodes=Float64[],
+            ratio_max_k_core=Float64[],
+            max_k_core=Float64[],
+            max_stddev=Float64[],
+            e2=Float64[],
+            e4=Float64[],
+            avg_clustering=Float64[],
+            density=Float64[],
+            avg_degree=Float64[],
+            egotime=Float64[],
+            kcoretime=Float64[]
+        )
+    end
+
+    for r in results
+        push!(df, r)
+    end
+
+    #
+    # TRANSFORM
+    #
+
+    transform!(df, :max_stddev => (v -> 100000 ./ v) => :std1)
+    transform!(df, :std1 => (v -> v ./ maximum(v)) => :norm)
+    transform!(
+        df,
+        [:norm, :ratio_max_k_core] => ((v1, v2) -> (v1 .* 0.75) + (v2 .* 0.25)) => :w1,
+    )
+    transform!(df, [:norm] => ((v1) -> floor.((v1 .* 500))) => :qnorm)
+
+    if DEBUG
+        transform!(df, [:norm, :avg_degree] => ((v1, v2) -> v1 .* v2) => :ad2)
+    end
+
+    sort!(df, [:qnorm, :ratio_max_k_core], rev=true)
+
+    #
+    # SAVE
+    #
+    open("results-$(all)-$(hop).csv", "w") do output
+        CSV.write(output, df, delim=";")
+    end
 
 
     # try free up memory

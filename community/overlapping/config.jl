@@ -1,4 +1,4 @@
 
-all = 10000
-hop = 2
+all = 100000
+hop = 1
 dom_file = "/mnt/n/sources/01_datalab/2022/data/auth_dom_scores.txt"
