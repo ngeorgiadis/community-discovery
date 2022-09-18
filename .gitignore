@@ -11,3 +11,4 @@ back/
 exp/
 run-api.cmd
 cmd/aminer/settings.json
+community/non-overlapping/times.out

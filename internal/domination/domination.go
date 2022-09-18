@@ -425,15 +425,11 @@ func (dsc *DominationScoreCalculator) Calc(dataReader DatasetReader, inputFile s
 			point_to_compare_with := j.Attrs
 
 			if a_less_b(point_to_compare_with, point) {
-
 				for _, v := range grid[jk] {
 					baseScore += v.Count
 				}
-
 			} else if a_less_or_equal_b(point_to_compare_with, point) {
-
 				later = append(later, grid[jk]...)
-
 			}
 		}
 		la += time.Since(l1)
