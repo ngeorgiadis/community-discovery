@@ -12,3 +12,10 @@ exp/
 run-api.cmd
 cmd/aminer/settings.json
 community/non-overlapping/times.out
+community/non-overlapping/*.csv
+community/non-overlapping/run.js
+community/non-overlapping/run.out
+community/overlapping/times.out
+community/overlapping/*.csv
+community/overlapping/run.js
+community/overlapping/run.out
