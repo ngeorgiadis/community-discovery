@@ -7,95 +7,7 @@ using Statistics
 using MD5
 
 include("config.jl")
-
-DEBUG = false
-
-function load_graph_data_simple(file)
-    G = MetaGraph(1712433)
-
-    open(file) do f
-        for ln in eachline(f)
-            p = split(ln, "\t")
-            if length(p) == 3
-                index1 = parse(Int64, SubString(p[1], 2))
-                index2 = parse(Int64, p[2])
-                add_edge!(G, index1, index2)
-            end
-        end
-    end
-    return G
-end
-
-function load_graph_data_multigraph(file)
-    G = MetaGraph(1712433)
-
-    open(file) do f
-        for ln in eachline(f)
-            p = split(ln, "\t")
-            if length(p) == 3
-                index1 = parse(Int64, SubString(p[1], 2))
-                index2 = parse(Int64, p[2])
-                add_edge!(G, index1, index2)
-            end
-        end
-    end
-    return G
-end
-
-function read_dom(file)
-
-    max_degree = 0
-    max_dom = 0
-
-    dom_dict = Dict{Int64,Int64}()
-    dom_array = []
-
-
-    open(file) do f
-        for ln in eachline(f)
-            p = split(ln, "\t")
-            if length(p) == 2
-                id = parse(Int64, p[1])
-                dom = parse(Int64, p[2])
-
-                if dom > max_dom
-                    max_dom = dom
-                end
-
-                dom_dict[id] = dom
-                push!(dom_array, Dict{Symbol,Any}(:id => id, :dom => dom))
-            end
-        end
-    end
-
-    sort!(dom_array, by=x -> (x[:dom], x[:id]), rev=true)
-
-    return dom_dict, dom_array, max_dom
-end
-
-function get_graph_stats(attr, max_dom, max_core_number)
-
-    stats = Dict{String,Any}()
-
-    N = length(attr)
-    square_sum = 0
-
-    for n in attr
-        square_sum += (n[:dom] - max_dom)^2
-    end
-
-    ratio_max_core = max_core_number / N
-    stddev = sqrt(square_sum / N)
-
-    stats["number_of_nodes"] = N
-    stats["ratio_max_k_core"] = ratio_max_core
-    stats["max_k_core"] = max_core_number
-    stats["max_stddev"] = stddev
-    stats["e2"] = (max_core_number * ratio_max_core) / stddev
-    stats["e4"] = (max_core_number + ratio_max_core) / stddev
-
-    return stats
-end
+include("../common.jl")
 
 function find_communities_overlapping(g, dsa, top, hop, check_points)
 
@@ -129,14 +41,15 @@ function find_communities_overlapping(g, dsa, top, hop, check_points)
         et = Base.time() - t0
         egotime = egotime + et
 
-        e2, _ = induced_subgraph(
-            e1,
-            filter(
-                v ->
-                    get_prop(e1, v, :dom) > 0,
-                vertices(e1),
-            ),
-        )
+        e2 = e1
+        # e2, _ = induced_subgraph(
+        #     e1,
+        #     filter(
+        #         v ->
+        #             get_prop(e1, v, :dom) > 0,
+        #         vertices(e1),
+        #     ),
+        # )
         if nv(e2) <= 1
             continue
         end
@@ -160,6 +73,18 @@ function find_communities_overlapping(g, dsa, top, hop, check_points)
         stats["original_index"] = idx
         stats["egotime"] = et
         stats["kcoretime"] = kt
+
+        if DEBUG
+            stats["avg_clustering"] = mean(local_clustering_coefficient(k1))
+            stats["density"] = density(k1)
+            stats["avg_degree"] = 2 * ne(k1) / nv(k1)
+
+            nodes = ""
+            for n in k2
+                nodes = nodes * "$(n[:id]), "
+            end
+            stats["nodes"] = nodes
+        end
 
         push!(results, stats)
 
@@ -227,7 +152,8 @@ function main()
             density=Float64[],
             avg_degree=Float64[],
             egotime=Float64[],
-            kcoretime=Float64[]
+            kcoretime=Float64[],
+            nodes=String[]
         )
     end
 
@@ -256,7 +182,8 @@ function main()
     #
     # SAVE
     #
-    open("results-$(all)-$(hop).csv", "w") do output
+    stmp = Dates.format(now(), "yyyymmdd-HHMMSS")
+    open("results-$(all)-$(hop)-$(stmp).csv", "w") do output
         CSV.write(output, df, delim=";")
     end
 
@@ -271,4 +198,3 @@ function main()
 end
 
 main()
-
