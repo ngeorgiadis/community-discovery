@@ -123,7 +123,7 @@ func translate(p []int, stats *DataStats, gridSize ...int) []int {
 	for i := range p {
 		steps := float64(stats.Max[i]-stats.Min[i]) / float64(gridSize[i])
 		n, _ := math.Modf(float64(p[i]) / steps)
-		res[i] = int(n)
+		res[i] = int(1 + n)
 		// res[i] = int(float64(p[i]) / steps)
 	}
 
@@ -132,13 +132,15 @@ func translate(p []int, stats *DataStats, gridSize ...int) []int {
 
 func translate2(p []int, stats *DataStats, gridSize ...int) float64 {
 
-	// res := make([]float64, len(p))
+	if a_equals_b(stats.Min, p) {
+		return 0
+	}
 
 	res := 1.0
 
 	for i := range p {
 		steps := float64(stats.Max[i]-stats.Min[i]) / float64(gridSize[i])
-		_, f := math.Modf(float64(p[i]) / steps)
+		_, f := math.Modf(float64(1+p[i]) / steps)
 		res = res * f
 	}
 
