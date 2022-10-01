@@ -130,7 +130,7 @@ func translate(p []int, stats *DataStats, gridSize ...int) []int {
 	return res
 }
 
-func translate2(p []int, stats *DataStats, gridSize ...int) float64 {
+func translateApprx(p []int, stats *DataStats, gridSize ...int) float64 {
 
 	if a_equals_b(stats.Min, p) {
 		return 0
@@ -447,7 +447,7 @@ func (dsc *DominationScoreCalculator) Calc(dataReader DatasetReader, inputFile s
 					agrCellItems += l.Count
 				}
 
-				apprx := translate2(n.Attrs, stats, gridSize...)
+				apprx := translateApprx(n.Attrs, stats, gridSize...)
 				approximateScore := float64(agrCellItems) * apprx
 
 				nodeScore += int(approximateScore)
