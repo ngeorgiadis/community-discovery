@@ -19,3 +19,5 @@ community/overlapping/times.out
 community/overlapping/*.csv
 community/overlapping/run.js
 community/overlapping/run.out
+community/overlapping/run-h3.out
+community/non-overlapping/run-h3.out
