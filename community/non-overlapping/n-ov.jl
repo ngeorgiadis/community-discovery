@@ -44,23 +44,12 @@ function find_communities(g, dsa, top, hop, check_points)
         et = Base.time() - t0
         egotime = egotime + et
 
-        # v1 = filter(
-        #     v ->
-        #         get_prop(e1, v, :dom) > 0 && !haskey(visited, get_prop(e1, v, :id)),
-        #     vertices(e1),
-        # )
-
         v1 = filter(
             v -> !haskey(visited, get_prop(e1, v, :id)),
             vertices(e1),
         )
 
         e2 = e1[v1]
-        if (!is_connected(e2))
-            init_idx = findfirst(v -> get_prop(e2, v, :id) == n[:id], vertices(e2))
-            e2 = egonet(e2, init_idx, hop)
-        end
-
         if nv(e2) <= 1
             continue
         end
@@ -115,8 +104,6 @@ function find_communities(g, dsa, top, hop, check_points)
 end
 
 function main()
-
-    graph_file = "/mnt/n/sources/01_datalab/2022/data/AMiner-Coauthor.txt"
 
     println("graph_file: $(graph_file)")
     println("dom_file: $(dom_file)")

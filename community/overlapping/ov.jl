@@ -42,14 +42,6 @@ function find_communities_overlapping(g, dsa, top, hop, check_points)
         egotime = egotime + et
 
         e2 = e1
-        # e2, _ = induced_subgraph(
-        #     e1,
-        #     filter(
-        #         v ->
-        #             get_prop(e1, v, :dom) > 0,
-        #         vertices(e1),
-        #     ),
-        # )
         if nv(e2) <= 1
             continue
         end
@@ -98,8 +90,6 @@ function find_communities_overlapping(g, dsa, top, hop, check_points)
 end
 
 function main()
-
-    graph_file = "/mnt/n/sources/01_datalab/2022/data/AMiner-Coauthor.txt"
 
     println("graph_file: $(graph_file)")
     println("dom_file: $(dom_file)")
