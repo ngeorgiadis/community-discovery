@@ -23,3 +23,5 @@ community/overlapping/run-h3.out
 community/non-overlapping/run-h3.out
 community/non-overlapping/config.jl
 community/overlapping/config.jl
+community/non-overlapping/runtime-config.jl
+community/overlapping/runtime-config.jl
