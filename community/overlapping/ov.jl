@@ -8,7 +8,7 @@ using MD5
 
 # this file (config.jl) includes runtime settings
 # must be configured before run the script
-include("config.jl")
+include("runtime-config.jl")
 
 include("../common.jl")
 

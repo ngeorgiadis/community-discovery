@@ -5,7 +5,7 @@ using CSV
 using Statistics
 using MD5
 
-include("config.jl")
+include("runtime-config.jl")
 include("../common.jl")
 
 function find_communities(g, dsa, top, hop, check_points)
