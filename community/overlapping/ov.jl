@@ -6,7 +6,10 @@ using CSV
 using Statistics
 using MD5
 
+# this file (config.jl) includes runtime settings
+# must be configured before run the script
 include("config.jl")
+
 include("../common.jl")
 
 function find_communities_overlapping(g, dsa, top, hop, check_points)
