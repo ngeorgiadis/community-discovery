@@ -35,5 +35,5 @@ func main() {
 	// 	10, 10, 10, 10,
 	// }
 
-	ds.Calc(defaultReader, a.NodesCSVFile, dsFilePath, false, a.GridSize)
+	ds.Calc(defaultReader, a.NodesCSVFile, dsFilePath, true, a.GridSize)
 }
