@@ -127,26 +127,13 @@ function find_community_non_overlapping(g, dsa, init, hop, max_dom, get_max_core
         end
 
         e1 = egonet(g, n[:id], hop)
-        # v1 = filter(
-        #     v ->
-        #         get_prop(e1, v, :dom) > 0 &&
-        #             !haskey(visited, get_prop(e1, v, :id)),
-        #     vertices(e1),
-        # )
-
         v1 = filter(
             v -> !haskey(visited, get_prop(e1, v, :id)),
             vertices(e1),
         )
 
         e2 = e1[v1]
-
-        if (!is_connected(e2))
-            init_idx = findfirst(v -> get_prop(e2, v, :id) == n[:id], vertices(e2))
-            e2 = egonet(e2, init_idx, hop)
-        end
-
-        if nv(e2) == 0
+        if nv(e2) <= 1
             continue
         end
 

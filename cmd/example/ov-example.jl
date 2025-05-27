@@ -8,9 +8,24 @@ using MD5
 
 # this file (config.jl) includes runtime settings
 # must be configured before run the script
-include("runtime-config.jl")
+include("runtime-config-example.jl")
+include("common.jl")
 
-include("../common.jl")
+function load_graph_data_multigraph_example(file)
+    G = MetaGraph(23)
+
+    open(file) do f
+        for ln in eachline(f)
+            p = split(ln, "\t")
+            if length(p) == 2
+                index1 = parse(Int64, p[1])
+                index2 = parse(Int64, p[2])
+                add_edge!(G, index1, index2)
+            end
+        end
+    end
+    return G
+end
 
 function find_communities_overlapping(g, dsa, top, hop, check_points)
 
@@ -92,37 +107,48 @@ function find_communities_overlapping(g, dsa, top, hop, check_points)
     return results, egotime, kcoretime
 end
 
-function main()
+println("graph_file: $(graph_file)")
+println("dom_file: $(dom_file)")
+println("hop: $(hop)")
+println("")
 
-    println("graph_file: $(graph_file)")
-    println("dom_file: $(dom_file)")
-    println("hop: $(hop)")
-    println("")
+g = @time load_graph_data_multigraph_example(graph_file)
+didx, dsa, max_dom = @time read_dom(dom_file)
 
-    g = @time load_graph_data_multigraph(graph_file)
-    didx, dsa, max_dom = @time read_dom(dom_file)
+for (k, v) in didx
+    set_prop!(g, k, :id, k)
+    set_prop!(g, k, :dom, v)
+end
 
-    for (k, v) in didx
-        set_prop!(g, k, :id, k)
-        set_prop!(g, k, :dom, v)
-    end
+didx = nothing
+GC.gc()
 
-    didx = nothing
-    GC.gc()
+# variable `all` is defined
+# in runtime-config.jl
 
-    # variable `all` is defined
-    # in runtime-config.jl
+check_points = [5000, 10000, 50000, 100000, 500000]
+results, egotime, kcoretime = @time find_communities_overlapping(g, dsa, all, hop, check_points)
 
-    check_points = [5000, 10000, 50000, 100000, 500000]
-    results, egotime, kcoretime = @time find_communities_overlapping(g, dsa, all, hop, check_points)
+println("total communities: $(length(results)), egonet time: $(egotime), k-core time: $(kcoretime)")
+println("")
 
-    println("total communities: $(length(results)), egonet time: $(egotime), k-core time: $(kcoretime)")
-    println("")
+#
+# SAVING RESULTS
+#
 
-    #
-    # SAVING RESULTS
-    #
+df = DataFrame(init=Int64[],
+    original_index=Int64[],
+    number_of_nodes=Float64[],
+    ratio_max_k_core=Float64[],
+    max_k_core=Float64[],
+    max_stddev=Float64[],
+    e2=Float64[],
+    e4=Float64[],
+    egotime=Float64[],
+    kcoretime=Float64[]
+)
 
+if DEBUG
     df = DataFrame(init=Int64[],
         original_index=Int64[],
         number_of_nodes=Float64[],
@@ -131,71 +157,55 @@ function main()
         max_stddev=Float64[],
         e2=Float64[],
         e4=Float64[],
+        avg_clustering=Float64[],
+        density=Float64[],
+        avg_degree=Float64[],
         egotime=Float64[],
-        kcoretime=Float64[]
+        kcoretime=Float64[],
+        nodes=String[]
     )
-
-    if DEBUG
-        df = DataFrame(init=Int64[],
-            original_index=Int64[],
-            number_of_nodes=Float64[],
-            ratio_max_k_core=Float64[],
-            max_k_core=Float64[],
-            max_stddev=Float64[],
-            e2=Float64[],
-            e4=Float64[],
-            avg_clustering=Float64[],
-            density=Float64[],
-            avg_degree=Float64[],
-            egotime=Float64[],
-            kcoretime=Float64[],
-            nodes=String[]
-        )
-    end
-
-    for r in results
-        push!(df, r)
-    end
-
-    #
-    # TRANSFORM
-    #
-
-    transform!(df, :max_stddev => (v -> 100000 ./ v) => :std1)
-    transform!(df, :std1 => (v -> v ./ maximum(v)) => :norm)
-    transform!(
-        df,
-        [:norm, :ratio_max_k_core] => ((v1, v2) -> (v1 .* 0.75) + (v2 .* 0.25)) => :w1,
-    )
-    transform!(df, [:norm] => ((v1) -> floor.((v1 .* 500))) => :qnorm)
-
-    if DEBUG
-        transform!(df, [:norm, :avg_degree] => ((v1, v2) -> v1 .* v2) => :ad2)
-    end
-
-    sort!(df, [:qnorm, :ratio_max_k_core], rev=true)
-
-    #
-    # SAVE
-    #
-    stmp = Dates.format(now(), "yyyymmdd-HHMMSS")
-    suffix = ""
-    if DEBUG
-        suffix = "_DEBUG"
-    end
-
-    open("results-$(all)-$(hop)-$(stmp)$(suffix).csv", "w") do output
-        CSV.write(output, df, delim=";")
-    end
-
-
-    # try free up memory
-    g = nothing
-    didx = nothing
-    dsa = nothing
-    results = nothing
-
-    GC.gc()
 end
 
-main()
+for r in results
+    push!(df, r)
+end
+
+#
+# TRANSFORM
+#
+
+transform!(df, :max_stddev => (v -> 100000 ./ v) => :std1)
+transform!(df, :std1 => (v -> v ./ maximum(v)) => :norm)
+transform!(
+    df,
+    [:norm, :ratio_max_k_core] => ((v1, v2) -> (v1 .* 0.75) + (v2 .* 0.25)) => :w1,
+)
+transform!(df, [:norm] => ((v1) -> floor.((v1 .* 500))) => :qnorm)
+
+if DEBUG
+    transform!(df, [:norm, :avg_degree] => ((v1, v2) -> v1 .* v2) => :ad2)
+end
+
+sort!(df, [:qnorm, :ratio_max_k_core], rev=true)
+
+#
+# SAVE
+#
+# stmp = Dates.format(now(), "yyyymmdd-HHMMSS")
+suffix = ""
+if DEBUG
+    suffix = "_DEBUG"
+end
+
+open("ov-results-$(all)-$(hop)-$(suffix).csv", "w") do output
+    CSV.write(output, df, delim=";")
+end
+
+
+# try free up memory
+g = nothing
+didx = nothing
+dsa = nothing
+results = nothing
+
+GC.gc()
